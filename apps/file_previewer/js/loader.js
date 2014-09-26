@@ -33,17 +33,40 @@ var oldcontent = '';
 
 function showPreview(dir,filename, type){
 		
-	var viewer = getFilePath(dir, filename, type);
-		
-	$.fancybox({
-        'autoScale'     : false,
-        'transitionIn'  : 'none',
-        'transitionOut' : 'none',
-        'title'         : this.title,
-        'width'     : '75%',
-        'height'        : '75%',
-        'href'          : viewer,
-        'type'          : 'iframe'
+	var baseUrl = '';
+	if(dir === '/'){
+		baseUrl = dir + filename;
+	}
+	else{
+		baseUrl = dir + "/" + filename;
+	}
+	
+	//make an ajax call to get the path and then feed the path to the popup
+	$.ajax({
+        url: OC.Router.generate('preview_handler', { job: 'getName', fname: baseUrl}),
+        type: 'get',
+        dataType: 'text',
+        success: function(data) {
+        	var viewer = OC.Router.generate('preview_handler', { job: 'onClick', fname: data});
+        	//here, change the url
+        	var rootLink = OC.linkTo('file_previewer', 'preview_handler.php');
+        	rootLink = rootLink.substring( 0, rootLink.lastIndexOf( "/" ) + 1);
+        	window.history.pushState("","", rootLink + "preview" + baseUrl);
+        	$.fancybox({
+                'autoScale'     : false,
+                'transitionIn'  : 'none',
+                'transitionOut' : 'none',
+                'title'         : this.title,
+                'width'     : '75%',
+                'height'        : '75%',
+                'href'          : viewer,
+                'type'          : 'iframe'
+            });
+        },
+        error: function(data) {
+            OC.Notification.show(data.statusText);
+            hideNotification(3000);
+        }
     });
 		
 }
@@ -86,47 +109,68 @@ function getRequestURL(dir, filename, type) {
 }
 
 $(document).ready(function() {
-	if(!$.browser.msie){//doesn't work on IE
-		//if(location.href.indexOf("files")!=-1) {
-			if(typeof FileActions!=='undefined'){
-				var supportedMimes = new Array(
-					'application/msword',
-					'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-					'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
-					'application/msexcel',
-					'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-					'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
-					'application/mspowerpoint',
-					'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-					'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
-					'application/vnd.openxmlformats-officedocument.presentationml.template',
-					'application/vnd.openxmlformats-officedocument.presentationml.slide',
-					'application/vnd.oasis.opendocument.text', 
-					'application/vnd.oasis.opendocument.spreadsheet',
-					'application/vnd.oasis.opendocument.graphics',
-					'application/vnd.oasis.opendocument.presentation');
-				for (var i = 0; i < supportedMimes.length; ++i){
-					var mime = supportedMimes[i];
-					FileActions.register(mime,'Preview',OC.PERMISSION_READ,'',function(filename){
-						showPreview($('#dir').val(),filename, 'html');
-					});
-					/*FileActions.register(mime,'Prev',OC.PERMISSION_READ,'',function(filename){
-						showPreview($('#dir').val(),filename, 'pdf');
-					});
-					FileActions.setDefault(mime,'Prev');*/
-				}
+	
+	$.ajax({
+		url: OC.linkTo('file_previewer', 'preview_handler.php')+'?job=show_preview', 
+		type: 'get',
+		dataType: 'json',
+		success: function(data) {
+			if(data['preview'] === true){
+				showPreview(data['dir'], data['filename'], 'html');
 			}
-		//}
-		
-		//if(location.href.indexOf("files")!=-1) {
-			if(typeof FileActions!=='undefined') {
-				FileActions.register('application/msword','ePub', OC.PERMISSION_READ, '',function(filename) {
-					//window.location = OC.linkTo('file_previewer', 'docViewer.php')+'?dir='+encodeURIComponent($('#dir').val()).replace(/%2F/g, '/')+'&file='+encodeURIComponent(filename.replace('&', '%26'))+'&type=epub';
-					window.location = getRequestURL($('#dir').val(), filename, '.epub');
+		},
+		error: function(data) {
+			OC.Notification.show(data.statusText);
+			hideNotification(3000);
+		}
+	});
+	
+	//if(location.href.indexOf("files")!=-1) {
+		if(typeof FileActions!=='undefined'){
+			var supportedMimes = new Array(
+				'text/plain',
+				'text/markdown',
+				'image/tiff',
+				'image/tiff-fx',
+				'image/gif',
+				'image/jpeg',
+				'image/png',
+				'application/msword',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+				'application/msexcel',
+				'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+				'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+				'application/mspowerpoint',
+				'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+				'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+				'application/vnd.openxmlformats-officedocument.presentationml.template',
+				'application/vnd.openxmlformats-officedocument.presentationml.slide',
+				'application/vnd.oasis.opendocument.text', 
+				'application/vnd.oasis.opendocument.spreadsheet',
+				'application/vnd.oasis.opendocument.graphics',
+				'application/vnd.oasis.opendocument.presentation',
+				'application/vnd.abf');
+			for (var i = 0; i < supportedMimes.length; ++i){
+				var mime = supportedMimes[i];
+				FileActions.register(mime,'Preview',OC.PERMISSION_READ,'',function(filename){
+					showPreview($('#dir').val(),filename, 'html');
 				});
+				/*FileActions.register(mime,'Prev',OC.PERMISSION_READ,'',function(filename){
+					showPreview($('#dir').val(),filename, 'pdf');
+				});
+				FileActions.setDefault(mime,'Prev');*/
 			}
-		//}
+		}
+	//}
+	
+	//if(location.href.indexOf("files")!=-1) {
+		if(typeof FileActions!=='undefined') {
+			FileActions.register('application/msword','ePub', OC.PERMISSION_READ, '',function(filename) {
+				//window.location = OC.linkTo('file_previewer', 'docViewer.php')+'?dir='+encodeURIComponent($('#dir').val()).replace(/%2F/g, '/')+'&file='+encodeURIComponent(filename.replace('&', '%26'))+'&type=epub';
+				window.location = getRequestURL($('#dir').val(), filename, '.epub');
+			});
+		}
+	//}
 		
-		
-	}
 });

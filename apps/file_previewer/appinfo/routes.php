@@ -25,6 +25,6 @@
 	->requirements(array('fname' => '.*'))
 	->actionInclude('file_previewer/docViewer.php');*/
 
-$this->create('preview_handler', '{fname}')
+$this->create('preview_handler', '{job}/{fname}')
 	->requirements(array('fname' => '.*'))
 	->actionInclude('file_previewer/preview_handler.php');

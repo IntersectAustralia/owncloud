@@ -1,7 +1,7 @@
 var J5 = {
     width: 600,             // set slide width
     height: 450,            // set slide height
-    keepSlides: false,      // keeps slides in the document (in addition to in the slideshow)
+    keepSlides: true,      // keeps slides in the document (in addition to in the slideshow)
     notesEnabled: true,     // enables slide notes
     notesVisible: false,    // sets whether slide notes as visible by default
     notesHeight: 200        // sets height of the slide note tray
